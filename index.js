@@ -1,23 +1,58 @@
 
 // Game Tile Factory function
-// TODO make click handler work from the gameboard module
-// needs to recognise current player, then pass that as value to this
-// then update the game object
-const gameTile = function(x, y, clickHandler) {
+// TODO grid cell ssize adjusts when entering a value - fix;
+// TODO style grid values.
+// TODO add win/draw conditions.
+// TODO Add some controls ui, including start game, reset (will need clear board function) and winner view.
+
+const gameManager = (function() {
+    const players = ["X", "O"];
+
+    let current_player = players[0]
+
+    const tileValues = [
+        undefined, undefined,undefined, 
+        undefined,undefined,undefined,
+        undefined,undefined,undefined,
+    ];
+
+    const switchPlayer = () => {
+        current_player = current_player === players[0] ? players[1] : players[0];
+    }
+
+    const getCurrentPlayer = () => current_player
+
+    const recordTileValue = (i , value) => { 
+        // record the value of the clicked tile
+        tileValues[i] = value;
+        console.log(tileValues);
+        switchPlayer();
+
+    }
+    return {
+        getCurrentPlayer,
+        recordTileValue
+    }
+    
+})()
+
+
+const gameTile = function(id) {
 
     let value = null;
-
-    if (Number.isNaN(x) || Number.isNaN(y)) {
-        throw new Error("x and y coordinated must be numbers")
-    }
-
-    if (!Number.isInteger(x) || !Number.isInteger(y)) {
-        throw new Error("x and y coordinated must be integers")
-    }
-
     const tileElement = document.createElement("div");
     tileElement.classList.add("game-board__tile");
-    tileElement.id= `${x}${y}`;
+    tileElement.id = id;
+
+    tileElement.addEventListener("click", function() {
+        // just return if value already exists,
+        if (value) {return;}
+
+
+        const current_player = gameManager.getCurrentPlayer()
+        setValue(current_player);
+        gameManager.recordTileValue(id, current_player);
+    });
 
     const setValue = new_value => {
         
@@ -44,23 +79,16 @@ const gameBoard = (function() {
 
     const gameBoardElement = document.createElement("div");
     gameBoardElement.classList.add("game-board")
-
-    const tileValues = [];
-
-    const drawTiles = (xmax, ymax) => {
-        for (let y = 0; y < ymax; y++) {
-            for (let x = 0; x < xmax; x++) {
-                
-                let tile = gameTile(x, y);
-                tile.draw(gameBoardElement);
-                tileValues.push(tile);
-                
-            }
+    
+    const drawTiles = (n) => {
+        for (let i = 0; i < n; i++) {
+            let tile = gameTile(i);
+            tile.draw(gameBoardElement);
         }
     }
 
     const draw = (container) => {
-        drawTiles(3, 3)
+        drawTiles(9)
         container.appendChild(gameBoardElement)
     }
 
@@ -69,6 +97,7 @@ const gameBoard = (function() {
     }
 
 })()
+
 
 
 // Keeo app module and draw funtion at the end
