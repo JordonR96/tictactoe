@@ -1,9 +1,8 @@
 
 // Game Tile Factory function
 
-// TODO add win/draw conditions.
-// TODO Add some controls ui, including start game, reset (will need clear board function) and winner view.
-// TODO dont read click handler if game is over.
+// TODO finish ui (setting player name, gameover message, restart button)
+// TODO handle reset properlt
 
 // intersection function from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set
 function intersection(setA, setB) {
@@ -17,6 +16,9 @@ function intersection(setA, setB) {
 }
 
 const gameManager = (function() {
+
+    let active = false
+
     const players = ["X", "O"];
 
     let current_player = players[0]
@@ -45,15 +47,26 @@ const gameManager = (function() {
     // convert indexes to Sets
     winningIndexes = winningIndexes.map(value => new Set(value));
 
-    console.log(winningIndexes);
-
     let o_indexes = new Set();
     let x_indexes = new Set();
     let winner = undefined;
 
+    const getActive = () => {
+        return active;
+    }
+
+    const initialise = () => {
+        console.log("starting");
+        // TODO consider set active instead of this then all this is side affect of setting active to true
+        active = true ;
+        winner = undefined;
+        // clear our record of tile values
+        tileValues.forEach((_, i) => tileValues[i] = undefined);
+        // TODO need to be abel to clear the board, to do that we need set board method so we have reference to the current board here.
+        // alternatively we could get rid of old and draw whole new one but thats a lot of work
+    }
+
     const checkWinner = () => {
-        console.log(o_indexes);
-        console.log(x_indexes);
         
         winningIndexes.forEach(win => {
 
@@ -65,6 +78,11 @@ const gameManager = (function() {
                 winner = "X";
             }
         })
+
+        if (winner) {
+            active = false
+            console.log(winner + "Wins")
+        }
 
     };
     
@@ -93,7 +111,9 @@ const gameManager = (function() {
     }
     return {
         getCurrentPlayer,
-        recordTileValue
+        recordTileValue,
+        getActive,
+        initialise
     }
     
 })()
@@ -124,9 +144,12 @@ const gameTile = function(id) {
     } 
 
     tileElement.addEventListener("click", function() {
+        
+        // if game isnt active yet, return.
+        if (!gameManager.getActive()) {return;}
+
         // just return if value already exists,
         if (value) {return;}
-
 
         const current_player = gameManager.getCurrentPlayer()
         setValue(current_player);
@@ -165,6 +188,52 @@ const gameBoard = function() {
 
 }
 
+const textbox = function(label, placeholder, changeCallback) {
+    let value = "";
+    
+    let textElement = document.createElement("input");
+
+    textElement.classList.add("textbox");
+    textElement.setAttribute("type", "text");
+    textElement.setAttribute("placeholder", placeholder);
+    textElement.addEventListener("change", changeCallback);
+
+    const draw = container => container.appendChild(textElement)
+
+    return {
+        draw
+    }
+}
+
+
+const button = function(name, clickHandler) {
+    let buttonElement = document.createElement("button");
+    buttonElement.classList.add("btn");
+    buttonElement.addEventListener("click", clickHandler);
+    buttonElement.innerText = name;
+
+    const draw = container => container.appendChild(buttonElement)
+
+    return {
+        draw
+    }
+
+}
+
+const gameUI = function() {
+    const uiElement = document.createElement("div");
+    uiElement.classList.add("game__ui");
+
+    const play_button = button("Play", () => gameManager.initialise() ) 
+    play_button.draw(uiElement);
+
+    const draw = container => container.appendChild(uiElement)
+
+    return {
+        draw
+    }
+}
+
 
 
 // Keeo app module and draw funtion at the end
@@ -173,7 +242,12 @@ const app = (function() {
     appElement.classList.add("app")
 
     const draw = () => {
-        board = gameBoard();
+
+        let ui = gameUI();
+        ui.draw(appElement);
+
+
+        let board = gameBoard();
         board.draw(appElement);
         
         let root = document.getElementById('root');
