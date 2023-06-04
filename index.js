@@ -1,9 +1,20 @@
 
 // Game Tile Factory function
-// TODO grid cell ssize adjusts when entering a value - fix;
-// TODO style grid values.
+
 // TODO add win/draw conditions.
 // TODO Add some controls ui, including start game, reset (will need clear board function) and winner view.
+// TODO dont read click handler if game is over.
+
+// intersection function from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set
+function intersection(setA, setB) {
+    const _intersection = new Set();
+    for (const elem of setB) {
+      if (setA.has(elem)) {
+        _intersection.add(elem);
+      }
+    }
+    return _intersection;
+}
 
 const gameManager = (function() {
     const players = ["X", "O"];
@@ -16,6 +27,47 @@ const gameManager = (function() {
         undefined,undefined,undefined,
     ];
 
+    // winning indexes, need to be lowest to highets indexes.
+    let winningIndexes = [
+        // Horizontal win
+        [0, 1, 2],
+        [3, 4, 5],
+        [6, 7, 8],
+        // vertical win
+        [0, 3, 6],
+        [1, 4, 7],
+        [2, 5, 8],
+        // diagonal win
+        [0, 4, 8],
+        [2, 4, 6]
+
+    ]
+    // convert indexes to Sets
+    winningIndexes = winningIndexes.map(value => new Set(value));
+
+    console.log(winningIndexes);
+
+    let o_indexes = new Set();
+    let x_indexes = new Set();
+    let winner = undefined;
+
+    const checkWinner = () => {
+        console.log(o_indexes);
+        console.log(x_indexes);
+        
+        winningIndexes.forEach(win => {
+
+            if (intersection(o_indexes, win).size === 3) {
+                winner = "O";
+            }
+
+            if (intersection(x_indexes, win).size === 3) {
+                winner = "X";
+            }
+        })
+
+    };
+    
     const switchPlayer = () => {
         current_player = current_player === players[0] ? players[1] : players[0];
     }
@@ -25,9 +77,19 @@ const gameManager = (function() {
     const recordTileValue = (i , value) => { 
         // record the value of the clicked tile
         tileValues[i] = value;
-        console.log(tileValues);
-        switchPlayer();
+        if (value === "X") {
+            x_indexes.add(i);
+        } else if (value === "O") {
+            o_indexes.add(i);
+        }
+        
+        checkWinner();
 
+        if (!tileValues.includes(undefined)) {
+            console.log("Game Over");
+        }
+
+        switchPlayer();
     }
     return {
         getCurrentPlayer,
@@ -48,16 +110,6 @@ const gameTile = function(id) {
     tileValue.classList.add("game-board__tile__text")
     tileElement.appendChild(tileValue);
 
-    tileElement.addEventListener("click", function() {
-        // just return if value already exists,
-        if (value) {return;}
-
-
-        const current_player = gameManager.getCurrentPlayer()
-        setValue(current_player);
-        gameManager.recordTileValue(id, current_player);
-    });
-
     const setValue = new_value => {
         
         new_value = new_value.toUpperCase();
@@ -70,6 +122,16 @@ const gameTile = function(id) {
         tileValue.innerText = value;
         tileValue.classList.add(value === "X" ? "black_text" : "red_text");
     } 
+
+    tileElement.addEventListener("click", function() {
+        // just return if value already exists,
+        if (value) {return;}
+
+
+        const current_player = gameManager.getCurrentPlayer()
+        setValue(current_player);
+        gameManager.recordTileValue(id, current_player);
+    });
     
     const draw = container => {
         container.appendChild(tileElement);
@@ -80,7 +142,7 @@ const gameTile = function(id) {
     }
 }
 
-const gameBoard = (function() {
+const gameBoard = function() {
 
     const gameBoardElement = document.createElement("div");
     gameBoardElement.classList.add("game-board")
@@ -101,7 +163,7 @@ const gameBoard = (function() {
         draw
     }
 
-})()
+}
 
 
 
@@ -111,8 +173,8 @@ const app = (function() {
     appElement.classList.add("app")
 
     const draw = () => {
-        
-        gameBoard.draw(appElement);
+        board = gameBoard();
+        board.draw(appElement);
         
         let root = document.getElementById('root');
         root.appendChild(appElement);
