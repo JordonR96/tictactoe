@@ -15,14 +15,25 @@
 }
 
 .game-board {
-    width: 70vw;
-    height: 70vw;
-    border: 1px solid black;
-
+    width: 315px;
+    height: 315px;
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
 }
 
 .game-board__tile {
-    border: 1px solid green;
+    border: 1px solid black;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 80px;
+}
+
+.black_text {
+    color: black;
+}
+
+.red_text {
+    color: red;
 }

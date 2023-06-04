@@ -44,6 +44,10 @@ const gameTile = function(id) {
     tileElement.classList.add("game-board__tile");
     tileElement.id = id;
 
+    const tileValue = document.createElement("div");
+    tileValue.classList.add("game-board__tile__text")
+    tileElement.appendChild(tileValue);
+
     tileElement.addEventListener("click", function() {
         // just return if value already exists,
         if (value) {return;}
@@ -63,7 +67,8 @@ const gameTile = function(id) {
         }
 
         value = new_value;
-        tileElement.innerText = value;
+        tileValue.innerText = value;
+        tileValue.classList.add(value === "X" ? "black_text" : "red_text");
     } 
     
     const draw = container => {
