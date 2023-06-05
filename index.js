@@ -1,8 +1,10 @@
 
 // Game Tile Factory function
 
-// TODO finish ui (setting player name, gameover message, restart button)
-// TODO handle reset properlt
+// TODO use player name for turns, winner etc - still tlel them whethwe thay are placing an O or an X
+// TODO styles, clearly telegraph actions, different colors for certain statuses?
+// TODO do computer player and AI
+// Deactivate play button when active. mabe visually keepo pressed.
 
 // intersection function from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set
 function intersection(setA, setB) {
@@ -15,19 +17,33 @@ function intersection(setA, setB) {
     return _intersection;
 }
 
+let globalUIReference = undefined;
+let globalBoardReference = undefined;
+
 const gameManager = (function() {
-
-    let active = false
-
     const players = ["X", "O"];
-
+    let active = false
     let current_player = players[0]
 
-    const tileValues = [
-        undefined, undefined,undefined, 
-        undefined,undefined,undefined,
-        undefined,undefined,undefined,
-    ];
+    let tileValues = [];
+
+    let o_indexes = undefined;
+    let x_indexes = undefined;
+    let winner = undefined;
+
+    let setInitialValues = () => {
+        active = false
+        tileValues = [
+            undefined, undefined,undefined, 
+            undefined,undefined,undefined,
+            undefined,undefined,undefined,
+        ];
+        o_indexes = new Set();
+        x_indexes = new Set()
+        winner = undefined
+    }
+
+    setInitialValues();
 
     // winning indexes, need to be lowest to highets indexes.
     let winningIndexes = [
@@ -47,23 +63,30 @@ const gameManager = (function() {
     // convert indexes to Sets
     winningIndexes = winningIndexes.map(value => new Set(value));
 
-    let o_indexes = new Set();
-    let x_indexes = new Set();
-    let winner = undefined;
+    const reset = () => {
+        end();
+        globalBoardReference.clear();
+        setInitialValues();
+        globalUIReference.setGameStatusLabel("Press Play!");
+    }
+
 
     const getActive = () => {
         return active;
     }
 
     const initialise = () => {
-        console.log("starting");
-        // TODO consider set active instead of this then all this is side affect of setting active to true
-        active = true ;
+        if (active) return;
+        active = true;
+        globalUIReference.setGameStatusLabel("Player X's Turn!");
         winner = undefined;
         // clear our record of tile values
         tileValues.forEach((_, i) => tileValues[i] = undefined);
-        // TODO need to be abel to clear the board, to do that we need set board method so we have reference to the current board here.
         // alternatively we could get rid of old and draw whole new one but thats a lot of work
+    }
+
+    const end = () => {
+        active = false;
     }
 
     const checkWinner = () => {
@@ -80,19 +103,29 @@ const gameManager = (function() {
         })
 
         if (winner) {
-            active = false
-            console.log(winner + "Wins")
+            end();
+            globalUIReference.setGameStatusLabel(`Player ${winner}'s Wins!`);
+            
         }
 
     };
     
+    const decideDraw = () => {
+        if (!tileValues.includes(undefined)) {
+            end();
+            globalUIReference.setGameStatusLabel("Draw!");
+        }
+    }
+
     const switchPlayer = () => {
         current_player = current_player === players[0] ? players[1] : players[0];
+        globalUIReference.setGameStatusLabel(`Player ${current_player}'s Turn!`);
     }
 
     const getCurrentPlayer = () => current_player
 
     const recordTileValue = (i , value) => { 
+
         // record the value of the clicked tile
         tileValues[i] = value;
         if (value === "X") {
@@ -101,19 +134,23 @@ const gameManager = (function() {
             o_indexes.add(i);
         }
         
+        // if winner is found, active = false
         checkWinner();
 
-        if (!tileValues.includes(undefined)) {
-            console.log("Game Over");
-        }
+        decideDraw();
+        
+        if (active) {
 
-        switchPlayer();
+            switchPlayer();
+        
+        }
     }
     return {
         getCurrentPlayer,
         recordTileValue,
         getActive,
-        initialise
+        initialise,
+        reset
     }
     
 })()
@@ -143,10 +180,19 @@ const gameTile = function(id) {
         tileValue.classList.add(value === "X" ? "black_text" : "red_text");
     } 
 
+    let clearValue = () => {
+        value = undefined;
+        tileValue.innerText = "";
+        tileValue.classList.remove("black_text");
+        tileValue.classList.remove("red_text");
+    }
+
     tileElement.addEventListener("click", function() {
         
         // if game isnt active yet, return.
-        if (!gameManager.getActive()) {return;}
+        if (!gameManager.getActive()) {
+            return;
+        }
 
         // just return if value already exists,
         if (value) {return;}
@@ -161,7 +207,8 @@ const gameTile = function(id) {
     }
 
     return {
-        draw
+        draw,
+        clearValue
     }
 }
 
@@ -170,10 +217,13 @@ const gameBoard = function() {
     const gameBoardElement = document.createElement("div");
     gameBoardElement.classList.add("game-board")
     
+    const tileReference = [];
+
     const drawTiles = (n) => {
         for (let i = 0; i < n; i++) {
             let tile = gameTile(i);
             tile.draw(gameBoardElement);
+            tileReference.push(tile);
         }
     }
 
@@ -182,26 +232,52 @@ const gameBoard = function() {
         container.appendChild(gameBoardElement)
     }
 
+    const clear = () => {
+        tileReference.forEach(tile => tile.clearValue())
+    }
+
     return {
-        draw
+        draw,
+        clear
     }
 
 }
 
-const textbox = function(label, placeholder, changeCallback) {
+const textbox = function(id, label, placeholder) {
     let value = "";
+
+    let setValue = () => {
+        value = textElement.value
+    }
+
+    let getValue = () => value;
+
+    let textbox_container = document.createElement("div");
+    textbox_container.classList.add("ui-field");
+    textbox_container.id = id;
     
+    let labelElement = document.createElement("label");
+    labelElement.setAttribute("for", id);
+    labelElement.classList.add("ui-field__label");
+    labelElement.innerText = label;
+
     let textElement = document.createElement("input");
 
     textElement.classList.add("textbox");
     textElement.setAttribute("type", "text");
+    textElement.setAttribute("name", id);
     textElement.setAttribute("placeholder", placeholder);
-    textElement.addEventListener("change", changeCallback);
+    textElement.oninput = setValue;
+    textElement.classList.add("ui-field__text-input")
 
-    const draw = container => container.appendChild(textElement)
+    textbox_container.appendChild(labelElement);
+    textbox_container.appendChild(textElement);
+
+    const draw = container => container.appendChild(textbox_container)
 
     return {
-        draw
+        draw,
+        getValue
     }
 }
 
@@ -217,24 +293,78 @@ const button = function(name, clickHandler) {
     return {
         draw
     }
+}
 
+const uiText = function( value, initiallyHidden) {
+    let hidden = undefined;
+    let setValue = new_value => {
+        value = new_value;
+        uiTextContainer.innerText = value;
+    }
+
+    let hide = () =>  {
+        if (hidden) return;
+
+        uiTextContainer.classList.add("hidden");
+    }
+
+    let show = () => {
+        if (!hidden) return;
+
+        uiTextContainer.classList.remove("hidden");
+    }
+
+    let uiTextContainer = document.createElement("div");
+    uiTextContainer.classList.add("ui-text");
+    uiTextContainer.innerText = value;
+    if (initiallyHidden) {
+        hide();
+    } 
+
+    hidden = initiallyHidden;
+
+    const draw = container => container.appendChild(uiTextContainer)
+
+
+    return {
+        draw,
+        setValue,
+        hide,
+        show
+    }
 }
 
 const gameUI = function() {
     const uiElement = document.createElement("div");
     uiElement.classList.add("game__ui");
 
+    const player1Name = textbox("player_one_name", "Player X", "Enter Name");
+    player1Name.draw(uiElement);
+
+    const player2Name = textbox("player_two_name", "Player O", "Enter Name");
+    player2Name.draw(uiElement);
+
+    const gameStatus = uiText("Press Play!", false);
+    gameStatus.draw(uiElement);
+
     const play_button = button("Play", () => gameManager.initialise() ) 
     play_button.draw(uiElement);
 
+    const reset_button = button("Reset", () => gameManager.reset() ) 
+    reset_button.draw(uiElement);
+
     const draw = container => container.appendChild(uiElement)
 
+    const setGameStatusLabel = newValue => {
+        gameStatus.setValue(newValue);
+    
+    }
+
     return {
-        draw
+        draw,
+        setGameStatusLabel
     }
 }
-
-
 
 // Keeo app module and draw funtion at the end
 const app = (function() {
@@ -243,12 +373,11 @@ const app = (function() {
 
     const draw = () => {
 
-        let ui = gameUI();
-        ui.draw(appElement);
+        globalUIReference = gameUI();
+        globalUIReference.draw(appElement);
 
-
-        let board = gameBoard();
-        board.draw(appElement);
+        globalBoardReference = gameBoard();
+        globalBoardReference.draw(appElement);
         
         let root = document.getElementById('root');
         root.appendChild(appElement);

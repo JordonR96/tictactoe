@@ -16,8 +16,9 @@
 
 .game__ui {
     height: 200px;
-    width: 80%;
+    width: 70%;
     border: 1px solid black;
+    display: grid;
 }
 
 .game-board {
@@ -42,4 +43,8 @@
 
 .red_text {
     color: red;
+}
+
+.hidden {
+    display: none;
 }
