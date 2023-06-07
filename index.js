@@ -1,10 +1,13 @@
 
 // Game Tile Factory function
 
+// TODO button needs to be inacive when game is happening, and when in game over state (so players cant restart without board clear)
+// TODO Deactivate play button when active. - also when game over so you cant press play without resetting borad - auto reset?
 // TODO use player name for turns, winner etc - still tlel them whethwe thay are placing an O or an X
 // TODO styles, clearly telegraph actions, different colors for certain statuses?
-// TODO do computer player and AI
-// Deactivate play button when active. mabe visually keepo pressed.
+// TODO mayve resrtucture code so were not using globals and passing reference to game manager.
+// Add title, check mobile
+//check todos
 
 // intersection function from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set
 function intersection(setA, setB) {
@@ -22,7 +25,23 @@ let globalBoardReference = undefined;
 
 const gameManager = (function() {
     const players = ["X", "O"];
-    let active = false
+    let active = undefined
+    const getActive = () => {
+        return active;
+    }
+
+    const setActive = new_active => {
+        active = new_active;
+        // TODO remove this hack, only exists until i make game manager not immediately invokes and pass in the references it needs.
+        if (globalUIReference) {
+            if (active) {
+                globalUIReference.deactivatePlayButton();
+            } else {
+                globalUIReference.activatePlayButton();
+            }
+        }
+    }
+
     let current_player = players[0]
 
     let tileValues = [];
@@ -32,7 +51,7 @@ const gameManager = (function() {
     let winner = undefined;
 
     let setInitialValues = () => {
-        active = false
+        setActive(false)
         tileValues = [
             undefined, undefined,undefined, 
             undefined,undefined,undefined,
@@ -71,13 +90,10 @@ const gameManager = (function() {
     }
 
 
-    const getActive = () => {
-        return active;
-    }
-
+    
     const initialise = () => {
-        if (active) return;
-        active = true;
+        if (getActive()) return;
+        setActive(true)
         globalUIReference.setGameStatusLabel("Player X's Turn!");
         winner = undefined;
         // clear our record of tile values
@@ -86,7 +102,7 @@ const gameManager = (function() {
     }
 
     const end = () => {
-        active = false;
+        setActive(false)
     }
 
     const checkWinner = () => {
@@ -134,12 +150,12 @@ const gameManager = (function() {
             o_indexes.add(i);
         }
         
-        // if winner is found, active = false
+        // if winner is found, active is false
         checkWinner();
 
         decideDraw();
         
-        if (active) {
+        if (getActive()) {
 
             switchPlayer();
         
@@ -187,8 +203,7 @@ const gameTile = function(id) {
         tileValue.classList.remove("red_text");
     }
 
-    tileElement.addEventListener("click", function() {
-        
+    const tilePressed = () => {
         // if game isnt active yet, return.
         if (!gameManager.getActive()) {
             return;
@@ -200,6 +215,10 @@ const gameTile = function(id) {
         const current_player = gameManager.getCurrentPlayer()
         setValue(current_player);
         gameManager.recordTileValue(id, current_player);
+    }
+
+    tileElement.addEventListener("click", function() {
+        tilePressed();
     });
     
     const draw = container => {
@@ -258,17 +277,16 @@ const textbox = function(id, label, placeholder) {
     
     let labelElement = document.createElement("label");
     labelElement.setAttribute("for", id);
-    labelElement.classList.add("ui-field__label");
+    labelElement.classList.add("ui-label");
     labelElement.innerText = label;
 
     let textElement = document.createElement("input");
 
-    textElement.classList.add("textbox");
+    textElement.classList.add("ui-textbox");
     textElement.setAttribute("type", "text");
     textElement.setAttribute("name", id);
     textElement.setAttribute("placeholder", placeholder);
     textElement.oninput = setValue;
-    textElement.classList.add("ui-field__text-input")
 
     textbox_container.appendChild(labelElement);
     textbox_container.appendChild(textElement);
@@ -284,14 +302,36 @@ const textbox = function(id, label, placeholder) {
 
 const button = function(name, clickHandler) {
     let buttonElement = document.createElement("button");
-    buttonElement.classList.add("btn");
-    buttonElement.addEventListener("click", clickHandler);
+    let active = true;
+    buttonElement.classList.add("ui-btn");
+    buttonElement.addEventListener("click", e => {
+
+        if (!active) {
+            e.stopPropagation();
+            e.preventDefault();
+            return;
+        }
+        clickHandler()
+    });
     buttonElement.innerText = name;
+
+    const activate = () => {
+        active = true;
+        buttonElement.classList.remove("btn-inactive")
+    }
+
+    const deactivate = () => {
+        active  = false;
+        buttonElement.classList.add("btn-inactive")
+
+    }
 
     const draw = container => container.appendChild(buttonElement)
 
     return {
-        draw
+        draw,
+        activate,
+        deactivate
     }
 }
 
@@ -315,7 +355,7 @@ const uiText = function( value, initiallyHidden) {
     }
 
     let uiTextContainer = document.createElement("div");
-    uiTextContainer.classList.add("ui-text");
+    uiTextContainer.classList.add("ui-commander");
     uiTextContainer.innerText = value;
     if (initiallyHidden) {
         hide();
@@ -360,9 +400,22 @@ const gameUI = function() {
     
     }
 
+    const activatePlayButton = () => {
+        play_button.activate();
+    }
+
+    const deactivatePlayButton = () => {
+        play_button.deactivate();
+    }
+
+
+    
+
     return {
         draw,
-        setGameStatusLabel
+        setGameStatusLabel,
+        activatePlayButton,
+        deactivatePlayButton
     }
 }
 
