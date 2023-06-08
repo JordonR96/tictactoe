@@ -50,11 +50,14 @@
     padding: 1rem 0.5rem;
     outline: none;
     border: 1px solid black;
+    background-color: aliceblue;
     font-size: 1.3rem;
+    color: black;
 }
 
 .btn-inactive {
-    background: rgba(121, 121, 121, 0.397);
+    background-color: red;
+    color: black;
 }
 .ui-commander {
     border: 2px solid red;

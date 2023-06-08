@@ -89,12 +89,20 @@ const gameManager = (function() {
         globalUIReference.setGameStatusLabel("Press Play!");
     }
 
+    const getPlayingStatus = () => {
+        const current_player_name = globalUIReference.getPlayerName(current_player);
 
+        if (!current_player_name || current_player_name === "" ) {
+            return `${current_player}\'s turn!`
+        } else {
+            return `${current_player_name}\'s turn - Place an ${current_player}`
+        }
+    };
     
     const initialise = () => {
         if (getActive()) return;
         setActive(true)
-        globalUIReference.setGameStatusLabel("Player X's Turn!");
+        globalUIReference.setGameStatusLabel(getPlayingStatus());
         winner = undefined;
         // clear our record of tile values
         tileValues.forEach((_, i) => tileValues[i] = undefined);
@@ -135,7 +143,7 @@ const gameManager = (function() {
 
     const switchPlayer = () => {
         current_player = current_player === players[0] ? players[1] : players[0];
-        globalUIReference.setGameStatusLabel(`Player ${current_player}'s Turn!`);
+        globalUIReference.setGameStatusLabel(getPlayingStatus());
     }
 
     const getCurrentPlayer = () => current_player
@@ -384,6 +392,10 @@ const gameUI = function() {
     const player2Name = textbox("player_two_name", "Player O", "Enter Name");
     player2Name.draw(uiElement);
 
+    const getPlayerName = (current_player) => {
+        return current_player === "X" ? player1Name.getValue() : player2Name.getValue()
+    }
+
     const gameStatus = uiText("Press Play!", false);
     gameStatus.draw(uiElement);
 
@@ -415,7 +427,8 @@ const gameUI = function() {
         draw,
         setGameStatusLabel,
         activatePlayButton,
-        deactivatePlayButton
+        deactivatePlayButton,
+        getPlayerName
     }
 }
 
