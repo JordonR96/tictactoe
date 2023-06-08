@@ -6,7 +6,7 @@
 // TODO use player name for turns, winner etc - still tlel them whethwe thay are placing an O or an X
 // TODO styles, clearly telegraph actions, different colors for certain statuses?
 // TODO mayve resrtucture code so were not using globals and passing reference to game manager.
-// Add title, check mobile
+// Add title, check mobile maybe zoom out for mobile
 //check todos
 
 // intersection function from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set
@@ -95,7 +95,7 @@ const gameManager = (function() {
         if (!current_player_name || current_player_name === "" ) {
             return `${current_player}\'s turn!`
         } else {
-            return `${current_player_name}\'s turn - Place an ${current_player}`
+            return `${current_player_name}\'s turn\nPlace an ${current_player}`
         }
     };
     
@@ -270,7 +270,7 @@ const gameBoard = function() {
 
 }
 
-const textbox = function(id, label, placeholder) {
+const textbox = function(id, label, placeholder, characterLimit) {
     let value = "";
 
     let setValue = () => {
@@ -295,6 +295,11 @@ const textbox = function(id, label, placeholder) {
     textElement.setAttribute("name", id);
     textElement.setAttribute("placeholder", placeholder);
     textElement.oninput = setValue;
+
+    if (characterLimit && characterLimit > 0) {
+        textElement.maxLength = characterLimit;
+    }
+
 
     textbox_container.appendChild(labelElement);
     textbox_container.appendChild(textElement);
@@ -346,6 +351,7 @@ const button = function(name, clickHandler) {
 const uiText = function( value, initiallyHidden) {
     let hidden = undefined;
     let setValue = new_value => {
+
         value = new_value;
         uiTextContainer.innerText = value;
     }
@@ -364,11 +370,16 @@ const uiText = function( value, initiallyHidden) {
 
     let uiTextContainer = document.createElement("div");
     uiTextContainer.classList.add("ui-commander");
-    uiTextContainer.innerText = value;
+
+    let text = document.createElement("div");
+    text.innerText = value;
+
+    uiTextContainer.appendChild(text);
     if (initiallyHidden) {
         hide();
     } 
 
+    
     hidden = initiallyHidden;
 
     const draw = container => container.appendChild(uiTextContainer)
@@ -386,10 +397,10 @@ const gameUI = function() {
     const uiElement = document.createElement("div");
     uiElement.classList.add("game__ui");
 
-    const player1Name = textbox("player_one_name", "Player X", "Enter Name");
+    const player1Name = textbox("player_one_name", "Player X", "Enter Name", 35);
     player1Name.draw(uiElement);
 
-    const player2Name = textbox("player_two_name", "Player O", "Enter Name");
+    const player2Name = textbox("player_two_name", "Player O", "Enter Name", 35);
     player2Name.draw(uiElement);
 
     const getPlayerName = (current_player) => {

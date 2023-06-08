@@ -20,7 +20,7 @@
 }
 
 .game__ui {
-    width: 400px;
+    width: 600px;
     border: 1px solid black;
     display: grid;
     padding: 1rem;
@@ -64,11 +64,17 @@
     border-right: 0;
     border-left: 0;
     margin: 1rem 0;
-    padding: 1rem;
+    padding: 0.5rem;
     text-align: center;
-    font-size: 1.3rem;
-    font-weight: 900;
+    font-size: 1.1rem;
+    font-weight: 700;
     text-transform: uppercase;
+    height: 5em;
+    line-height: 1.5em;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .game-board {
