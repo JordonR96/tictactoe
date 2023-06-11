@@ -1,14 +1,4 @@
 
-// Game Tile Factory function
-
-// TODO button needs to be inacive when game is happening, and when in game over state (so players cant restart without board clear)
-// TODO Deactivate play button when active. - also when game over so you cant press play without resetting borad - auto reset?
-// TODO use player name for turns, winner etc - still tlel them whethwe thay are placing an O or an X
-// TODO styles, clearly telegraph actions, different colors for certain statuses?
-// TODO mayve resrtucture code so were not using globals and passing reference to game manager.
-// Add title, check mobile maybe zoom out for mobile
-//check todos
-
 // intersection function from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set
 function intersection(setA, setB) {
     const _intersection = new Set();
@@ -20,24 +10,31 @@ function intersection(setA, setB) {
     return _intersection;
 }
 
-let globalUIReference = undefined;
-let globalBoardReference = undefined;
-
-const gameManager = (function() {
+const gameManager = function() {
     const players = ["X", "O"];
     let active = undefined
     const getActive = () => {
         return active;
     }
+    let board;
+    let ui;
+
+    const setBoard = new_board => {
+        board = new_board;
+    }
+
+    const setUI = new_ui => {
+        ui = new_ui;
+    }
 
     const setActive = new_active => {
         active = new_active;
         // TODO remove this hack, only exists until i make game manager not immediately invokes and pass in the references it needs.
-        if (globalUIReference) {
+        if (ui) {
             if (active) {
-                globalUIReference.deactivatePlayButton();
+                ui.deactivatePlayButton();
             } else {
-                globalUIReference.activatePlayButton();
+                ui.activatePlayButton();
             }
         }
     }
@@ -51,7 +48,7 @@ const gameManager = (function() {
     let winner = undefined;
 
     let setInitialValues = () => {
-        setActive(false)
+        
         tileValues = [
             undefined, undefined,undefined, 
             undefined,undefined,undefined,
@@ -60,9 +57,16 @@ const gameManager = (function() {
         o_indexes = new Set();
         x_indexes = new Set()
         winner = undefined
+        winner = undefined;
+        tileValues.forEach((_, i) => tileValues[i] = undefined);
+
+        if (board) {
+            board.clear();
+        }
+        current_player = players[0]
     }
 
-    setInitialValues();
+    setActive(false);
 
     // winning indexes, need to be lowest to highets indexes.
     let winningIndexes = [
@@ -84,29 +88,34 @@ const gameManager = (function() {
 
     const reset = () => {
         end();
-        globalBoardReference.clear();
-        setInitialValues();
-        globalUIReference.setGameStatusLabel("Press Play!");
+        initialise();
     }
 
     const getPlayingStatus = () => {
-        const current_player_name = globalUIReference.getPlayerName(current_player);
+        const current_player_name = ui.getPlayerName(current_player);
 
         if (!current_player_name || current_player_name === "" ) {
             return `${current_player}\'s turn!`
         } else {
-            return `${current_player_name}\'s turn\nPlace an ${current_player}`
+            return `${current_player_name}\'s turn\n\nPlace an ${current_player}`
         }
     };
-    
+
+    const formatWinner = (winner) => {
+        const current_player_name = ui.getPlayerName(current_player);
+
+        if (!current_player_name || current_player_name === "" ) {
+            return `${winner} Wins!`
+        } else {
+            return `${current_player_name} Wins!`
+        }
+    }   
+
     const initialise = () => {
         if (getActive()) return;
         setActive(true)
-        globalUIReference.setGameStatusLabel(getPlayingStatus());
-        winner = undefined;
-        // clear our record of tile values
-        tileValues.forEach((_, i) => tileValues[i] = undefined);
-        // alternatively we could get rid of old and draw whole new one but thats a lot of work
+        setInitialValues();
+        ui.setGameStatusLabel(getPlayingStatus());
     }
 
     const end = () => {
@@ -128,7 +137,8 @@ const gameManager = (function() {
 
         if (winner) {
             end();
-            globalUIReference.setGameStatusLabel(`Player ${winner}'s Wins!`);
+
+            ui.setGameStatusLabel(formatWinner(winner));
             
         }
 
@@ -137,13 +147,13 @@ const gameManager = (function() {
     const decideDraw = () => {
         if (!tileValues.includes(undefined)) {
             end();
-            globalUIReference.setGameStatusLabel("Draw!");
+            ui.setGameStatusLabel("Draw!");
         }
     }
 
     const switchPlayer = () => {
         current_player = current_player === players[0] ? players[1] : players[0];
-        globalUIReference.setGameStatusLabel(getPlayingStatus());
+        ui.setGameStatusLabel(getPlayingStatus());
     }
 
     const getCurrentPlayer = () => current_player
@@ -174,13 +184,15 @@ const gameManager = (function() {
         recordTileValue,
         getActive,
         initialise,
-        reset
+        reset,
+        setBoard,
+        setUI
     }
     
-})()
+}
 
 
-const gameTile = function(id) {
+const gameTile = function(id, manager) {
 
     let value = null;
     const tileElement = document.createElement("div");
@@ -213,16 +225,16 @@ const gameTile = function(id) {
 
     const tilePressed = () => {
         // if game isnt active yet, return.
-        if (!gameManager.getActive()) {
+        if (!manager.getActive()) {
             return;
         }
 
         // just return if value already exists,
         if (value) {return;}
 
-        const current_player = gameManager.getCurrentPlayer()
+        const current_player = manager.getCurrentPlayer()
         setValue(current_player);
-        gameManager.recordTileValue(id, current_player);
+        manager.recordTileValue(id, current_player);
     }
 
     tileElement.addEventListener("click", function() {
@@ -239,7 +251,8 @@ const gameTile = function(id) {
     }
 }
 
-const gameBoard = function() {
+const gameBoard = function(manager) {
+    if (!manager) {return};
 
     const gameBoardElement = document.createElement("div");
     gameBoardElement.classList.add("game-board")
@@ -248,7 +261,7 @@ const gameBoard = function() {
 
     const drawTiles = (n) => {
         for (let i = 0; i < n; i++) {
-            let tile = gameTile(i);
+            let tile = gameTile(i, manager);
             tile.draw(gameBoardElement);
             tileReference.push(tile);
         }
@@ -393,14 +406,19 @@ const uiText = function( value, initiallyHidden) {
     }
 }
 
-const gameUI = function() {
+const gameUI = function(manager) {
+
+    if (!manager) {return};
+
     const uiElement = document.createElement("div");
     uiElement.classList.add("game__ui");
 
-    const player1Name = textbox("player_one_name", "Player X", "Enter Name", 35);
+    const name_character_limit = 50;
+
+    const player1Name = textbox("player_one_name", "Player X", "Enter Name", name_character_limit);
     player1Name.draw(uiElement);
 
-    const player2Name = textbox("player_two_name", "Player O", "Enter Name", 35);
+    const player2Name = textbox("player_two_name", "Player O", "Enter Name", name_character_limit);
     player2Name.draw(uiElement);
 
     const getPlayerName = (current_player) => {
@@ -410,10 +428,10 @@ const gameUI = function() {
     const gameStatus = uiText("Press Play!", false);
     gameStatus.draw(uiElement);
 
-    const play_button = button("Play", () => gameManager.initialise() ) 
+    const play_button = button("Play", () => manager.initialise() ) 
     play_button.draw(uiElement);
 
-    const reset_button = button("Reset", () => gameManager.reset() ) 
+    const reset_button = button("Reset", () => manager.reset() ) 
     reset_button.draw(uiElement);
 
     const draw = container => container.appendChild(uiElement)
@@ -449,13 +467,16 @@ const app = (function() {
     appElement.classList.add("app")
 
     const draw = () => {
-
-        globalUIReference = gameUI();
-        globalUIReference.draw(appElement);
-
-        globalBoardReference = gameBoard();
-        globalBoardReference.draw(appElement);
+        const manager = gameManager();
         
+        const ui = gameUI(manager);
+        manager.setUI(ui)
+        
+        const board = gameBoard(manager);
+        manager.setBoard(board)
+
+        ui.draw(appElement);
+        board.draw(appElement);
         let root = document.getElementById('root');
         root.appendChild(appElement);
 
